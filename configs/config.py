@@ -17,60 +17,41 @@ lr_sche_config = dict(
     )
 )
 
-act_type = 'relu'
-norm_type = 'none'
+model_name = "/root/.cache/huggingface/hub/models--microsoft--deberta-base/snapshots/0d1b43ccf21b5acd9f4e5f7b077fa698f05cf195"
 model_config = dict(
-    channels=[32, 64, 128, 256, 256],
-    num_block_per_stage=2,
-    block_type='TwoConvBlock',
-    act_type=act_type,
-    norm_type=norm_type,
-    # num_channels_per_gn_group = 1,
-    base_block_config=dict(
-        in_channels=None, 
-        out_channels=None,
-        # reduction=16,
-        act=act_type,
-        norm_config = dict(
-            type=norm_type,
-            config=dict(
-            )
-        )
-    )
+    model_name = model_name,
+    num_classes=6
 )
 
 
-
+                
 cifar_data_root = 'DATA'
 train_data_config = dict(
     dataset_config = dict(
-        root = cifar_data_root,
+        csv_file='data/train.csv', 
+        id_column='essay_id', 
+        text_column='full_text',
+        label_column='score',
+        mode='train'
     ), 
-    transform_config = dict(
-        img_size=32,
-        normalize_config=dict(
-            mean=(0.5, ),
-            std=(0.5, )
-        )
-    ),
+    tokenizer_name =model_name,
+
     data_loader_config = dict(
-        batch_size = 64,
+        batch_size = 16,
         num_workers = 4,
     )
 )
 test_data_config = dict(
     dataset_config = dict(
-        root = cifar_data_root,
+        csv_file='data/train.csv', 
+        id_column='essay_id', 
+        text_column='full_text',
+        label_column='score',
+        mode='val'
     ), 
-    transform_config = dict(
-        img_size=32,
-        normalize_config=dict(
-            mean=(0.5, ),
-            std=(0.5, )
-        )
-    ),
+    tokenizer_name =model_name,
     data_loader_config = dict(
-        batch_size = 64,
+        batch_size = 16,
         num_workers = 4,
         
     )
@@ -93,7 +74,7 @@ ckp_config = dict(
 # trainer config
 trainer_config = dict(
     log_every_n_steps=5,
-    precision='32',
+    precision='16-mixed',
     # val_check_interval=0.5, # val after k training batch 0.0-1.0, or a int
     check_val_every_n_epoch=1
 )
@@ -102,7 +83,7 @@ trainer_config = dict(
 # LOGGING
 enable_wandb = True
 wandb_config = dict(
-    project = 'backbone-exp',
+    project = 'nlp-cls',
     offline = True
 )
 ckp_root = f'[{wandb_config["project"]}]'

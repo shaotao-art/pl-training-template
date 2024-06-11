@@ -11,14 +11,9 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-
-
 from run_utils import get_callbacks, get_time_str, get_opt_lr_sch
-from cifar_10_dataset import get_train_data, get_val_data
-from models.cnn_model import CnnModel
-from models.vit import TorchVit, TorchConvVit
-from cv_common_utils import show_or_save_batch_img_tensor
-
+from dataset import get_train_data, get_val_data
+from model import get_model
 
 class Model(pl.LightningModule):
     def __init__(self, config):
@@ -26,35 +21,21 @@ class Model(pl.LightningModule):
         self.save_hyperparameters()
         self.config = config
         ########## ================ MODEL ==================== ##############
-        if config.model_config.get('patch_size', None) is not None:
-            if config.model_config.get('conv_channels', None) is None:
-                self.model = TorchVit(**config.model_config)
-            else: 
-                self.model = TorchConvVit(**config.model_config)
-        else:
-            self.model = CnnModel(**config.model_config)
+        self.model = get_model(config.model_config)
         self.loss_fn = nn.CrossEntropyLoss()
         ########## ================ MODEL ==================== ##############
                 
 
     def training_step(self, batch, batch_idx):
-        imgs, labels = batch
-        pred = self.model(imgs)
-        loss = self.loss_fn(pred, labels)
+        inps, labels = batch['inps'], batch['labels']
+        model_out = self.model(**inps, labels=labels)
+        loss = model_out.loss
+        pred = model_out.logits
         with torch.no_grad():
             pred_cls = torch.argmax(pred, dim=1)
             train_acc = (pred_cls == labels).float().mean()
         self.log_dict({'train_loss': loss,
                        'train_acc': train_acc})
-        
-        if self.current_epoch == 0 and batch_idx == 0:
-            b_s = imgs.shape[0]
-            vis_img = show_or_save_batch_img_tensor(imgs, int(math.sqrt(b_s)), denorm=True, mode='return')
-            self.logger.experiment.add_image(tag=f'train_batch', 
-                                img_tensor=vis_img, 
-                                global_step=self.global_step,
-                                dataformats='HWC',
-                                )
         return loss
     
     
@@ -67,20 +48,11 @@ class Model(pl.LightningModule):
         
     def validation_step(self, batch, batch_idx):
         self.model.eval()
-        imgs, labels = batch
-        pred = self.model(imgs)
+        inps, labels = batch['inps'], batch['labels']
+        pred = self.model(**inps).logits
         pred_cls = torch.argmax(pred, dim=1)
         self.num_right += torch.sum(pred_cls == labels).item()
-        self.total_num += imgs.shape[0]
-        
-        if self.current_epoch == 0 and batch_idx == 0:
-            b_s = imgs.shape[0]
-            vis_img = show_or_save_batch_img_tensor(imgs, int(math.sqrt(b_s)), denorm=True, mode='return')
-            self.logger.experiment.add_image(tag=f'val_batch', 
-                                img_tensor=vis_img, 
-                                global_step=self.global_step,
-                                dataformats='HWC',
-                                )
+        self.total_num += labels.shape[0]
         
 
     def configure_optimizers(self):
