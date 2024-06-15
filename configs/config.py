@@ -4,20 +4,20 @@ num_ep = 100
 optimizer_config = dict(
     type='adamw',
     config = dict(
-        lr = 3e-4,
+        lr = 1e-4,
         # momentum=0.9,
     )
 )
 
 lr_sche_config = dict(
-    type = 'cosine',
+    type = 'constant',
     config = dict(
         # epoches=[60, 80],
         # muls=[0.1, 0.1]
     )
 )
 
-model_name = "/root/.cache/huggingface/hub/models--microsoft--deberta-base/snapshots/0d1b43ccf21b5acd9f4e5f7b077fa698f05cf195"
+model_name = ""
 model_config = dict(
     model_name = model_name,
     num_classes=6
@@ -74,7 +74,7 @@ ckp_config = dict(
 # trainer config
 trainer_config = dict(
     log_every_n_steps=5,
-    precision='16-mixed',
+    precision='32',
     # val_check_interval=0.5, # val after k training batch 0.0-1.0, or a int
     check_val_every_n_epoch=1
 )
