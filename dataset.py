@@ -10,7 +10,12 @@ from transformers import AutoTokenizer
 from functools import partial
 
 class TextDataset(Dataset):
-    def __init__(self, csv_file, id_column, text_column, label_column, mode):
+    def __init__(self,
+                csv_file: str,
+                id_column: str,
+                text_column: str,
+                label_column: str,
+                mode: str):
         """
         Args:
             csv_file (string): Path to the csv file with text and labels.
@@ -49,10 +54,10 @@ def train_collate_fn(batch, tokenizer):
     texts = [sample['text'] for sample in batch]
     scores = [sample['label'] for sample in batch]
     enc_out = tokenizer(texts, 
-                    return_tensors="pt", 
-                    truncation=True, 
-                    max_length=512,
-                    padding=True)
+                        return_tensors="pt", 
+                        truncation=True, 
+                        max_length=512,
+                        padding=True)
     scores = torch.tensor(scores, dtype=torch.long) - 1 # map 1-6 to 0-5
     return dict(inps=enc_out, labels=scores)
 

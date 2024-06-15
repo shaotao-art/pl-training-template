@@ -12,11 +12,11 @@ from typing import Dict, List, Tuple
 
 
 
-def array2tensor(inp):
+def array2tensor(inp: np.ndarray):
     assert isinstance(inp, np.ndarray)
     return torch.tensor(inp)
 
-def print_lst_tensor_shape(lst, name=None):
+def print_lst_tensor_shape(lst: List, name=None):
     if name is not None:
         print(f'{name} is a list of tensor with shape')
     for x in lst:
@@ -35,6 +35,7 @@ def denorm_img(inp: torch.Tensor,
                std=torch.tensor([0.229, 0.224, 0.225])):
     """denorm tensor of shape (b[optional], c, h, w) 
     """
+    assert len(inp.shape) == 3 or len(inp.shape) == 4
     mean, std = list(map(partial(append_dims, target_len=3), [mean, std]))
     return inp * std + mean
 
@@ -51,12 +52,11 @@ def batch_img_tensor_to_img_lst(inp: torch.Tensor) -> List[np.ndarray]:
     Returns:
         List[np.ndarray]: _description_
     """
-    assert len(inp.shape) == 4 and isinstance(inp, torch.Tensor)
+    assert len(inp.shape) == 4 and isinstance(inp, torch.Tensor) and (inp.dtype == torch.float32)
     denormed_inp = denorm_img(inp)
     out = []
     for i in range(denormed_inp.shape[0]):
         out.append((denormed_inp[i].permute(1, 2, 0).contiguous().numpy() * 255).astype(np.uint8))
-        
     return out
 
 
@@ -69,7 +69,7 @@ def show_img(img: np.ndarray):
     plt.show()
 
 
-def dprint(debug, *args):
+def dprint(debug: bool, *args):
     if debug == True:
         print(args)
     else:

@@ -1,3 +1,7 @@
 *.swp
 .DS_Store
 __pycache__
+06-15-24
+data
+wandb
+deberta-v3

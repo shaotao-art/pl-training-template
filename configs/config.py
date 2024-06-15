@@ -17,7 +17,7 @@ lr_sche_config = dict(
     )
 )
 
-model_name = ""
+model_name = "deberta-v3"
 model_config = dict(
     model_name = model_name,
     num_classes=6
@@ -37,7 +37,7 @@ train_data_config = dict(
     tokenizer_name =model_name,
 
     data_loader_config = dict(
-        batch_size = 16,
+        batch_size = 4,
         num_workers = 4,
     )
 )
@@ -51,7 +51,7 @@ test_data_config = dict(
     ), 
     tokenizer_name =model_name,
     data_loader_config = dict(
-        batch_size = 16,
+        batch_size = 4,
         num_workers = 4,
         
     )
@@ -81,7 +81,7 @@ trainer_config = dict(
 
 
 # LOGGING
-enable_wandb = True
+logger_type = 'wandb'
 wandb_config = dict(
     project = 'nlp-cls',
     offline = True

@@ -39,21 +39,13 @@ class Model(pl.LightningModule):
         return loss
     
     
-    def on_validation_epoch_start(self) -> None:
-        self.num_right = 0
-        self.total_num = 0
-    
-    def on_validation_epoch_end(self) -> None:
-        self.log_dict({'val_acc': self.num_right / self.total_num})
-        
     def validation_step(self, batch, batch_idx):
         self.model.eval()
         inps, labels = batch['inps'], batch['labels']
         pred = self.model(**inps).logits
         pred_cls = torch.argmax(pred, dim=1)
-        self.num_right += torch.sum(pred_cls == labels).item()
-        self.total_num += labels.shape[0]
-        
+        acc = torch.sum(pred_cls == labels).item() / labels.shape[0]
+        self.log_dict({'val_acc': acc})
 
     def configure_optimizers(self):
         return get_opt_lr_sch(self.config.optimizer_config, 
@@ -74,15 +66,19 @@ def run(args):
     config.ckp_config['dirpath'] = config.ckp_root
     os.makedirs(config.ckp_root, exist_ok=True)
     config.run_name = args.run_name
-    # logger
     
-    # wandb_logger = None
-    # if config.enable_wandb:
-    #     wandb_logger = WandbLogger(**config.wandb_config,
-    #                             name=args.wandb_run_name)
-    #     wandb_logger.log_hyperparams(config)
-    logger = TensorBoardLogger(save_dir=config.ckp_root,
-                               name=config.run_name)
+
+    # logger
+    logger = None
+    if config.logger_type == 'wandb':
+        logger = WandbLogger(**config.wandb_config,
+                                name=args.run_name)
+        logger.log_hyperparams(config)
+    elif config.logger_type == 'tb':
+        logger = TensorBoardLogger(save_dir=config.ckp_root,
+                                name=config.run_name)
+    else:
+        raise NotImplementedError
     
     # DATA
     print('getting data...')
@@ -109,6 +105,7 @@ def run(args):
     print(model)
     if 'load_weight_from' in config and config.load_weight_from is not None:
         # only load weights
+        # TODO: may add load optimizer state dict
         state_dict = torch.load(config.load_weight_from)['state_dict']
         model.load_state_dict(state_dict)
         print(f'loading weight from {config.load_weight_from}')
