@@ -88,7 +88,7 @@ def run(args):
     print('getting data...')
     train_data, train_loader = get_train_data(config.train_data_config)
     val_data, val_loader = get_val_data(config.test_data_config)
-    print(f'len train_data: {len(train_data)}, len val_loader: {len(train_loader)}.')
+    print(f'len train_data: {len(train_data)}, len train_loader: {len(train_loader)}.')
     print(f'len val_data: {len(val_data)}, len val_loader: {len(val_loader)}.')
     print('done.')
 
