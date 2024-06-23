@@ -3,7 +3,8 @@ from torch import optim
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from datetime import datetime
 from typing import List
-
+import math
+from functools import partial
 
 def get_time_str():
     currentDateAndTime = datetime.now()
@@ -39,10 +40,45 @@ def get_step_lr_sche(optimizer,
                 return muls[0] * muls[1]
         else:
             raise NotImplementedError
-    from functools import partial
+    
     fn = partial(step_lr_fn, epoches=epoches, muls=muls)
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=fn)
     return scheduler    
+
+def get_cool_down_lr_sche(optimizer,
+                        total_steps, 
+                        warm_up_steps, 
+                        cool_down_steps,
+                        cool_down_schedule = 'inver_sqrt'):
+    def cool_down_lr_fn(step, 
+                        total_steps, 
+                        warm_up_steps, 
+                        cool_down_steps, 
+                        cool_down_schedule):
+        if step < warm_up_steps:
+            # linear warm up
+            return ((step + 1)/ warm_up_steps)
+        elif step < total_steps - cool_down_steps:
+            # constant lr
+            return 1.0
+        else:
+            if cool_down_schedule == 'linear':
+                # linear cool down
+                return 1.0 - (step - (total_steps - cool_down_steps)) / cool_down_steps
+            elif cool_down_schedule == 'inver_sqrt':
+                # inverse sqrt cool down
+                return 1.0 - math.sqrt((step - (total_steps - cool_down_steps)) / cool_down_steps)
+            elif cool_down_schedule == 'cosine':
+                # cosine cool down
+                return  0.5 * (1 + math.cos((step - (total_steps - cool_down_steps)) / cool_down_steps * math.pi))
+            else:
+                raise NotImplementedError
+        
+    fn = partial(cool_down_lr_fn, total_steps=total_steps, warm_up_steps=warm_up_steps, cool_down_steps=cool_down_steps, cool_down_schedule=cool_down_schedule)
+    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=fn)
+    return scheduler
+
+
 
 def get_opt_lr_sch(optimizer_config, lr_sche_config, model):
     if optimizer_config.type == 'sgd':
@@ -72,16 +108,20 @@ def get_opt_lr_sch(optimizer_config, lr_sche_config, model):
     elif lr_sche_config.type == 'cosine':
         lr_sche = transformers.get_cosine_schedule_with_warmup(optimizer,
                                                                 **lr_sche_config.config)
+    elif lr_sche_config.type == 'cool_down':
+        lr_sche = get_cool_down_lr_sche(optimizer=optimizer,
+                                        **lr_sche_config.config)
+        
     elif lr_sche_config.type == 'step':
         lr_sche = get_step_lr_sche(optimizer=optimizer,
-                                   **lr_sche_config.config)
+                                   **lr_sche_config.config)   
         return {
-            'optimizer': optimizer,
-            'lr_scheduler': {
-                'scheduler': lr_sche,
-                'interval': 'epoch'
-            }
+        'optimizer': optimizer,
+        'lr_scheduler': {
+            'scheduler': lr_sche,
+            'interval': 'epoch'
         }
+    }
     elif lr_sche_config.type == 'reduce':
         lr_sche = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
                                                         **lr_sche_config.config)

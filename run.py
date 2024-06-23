@@ -97,7 +97,18 @@ def run(args):
             config.lr_sche_config.config['num_warmup_steps'] = int(warm_up_epoch * len(train_loader))
         else:
             config.lr_sche_config.config['num_warmup_steps'] = 0
+        
         config.lr_sche_config.config['num_training_steps'] = config.num_ep * len(train_loader)
+    
+    if config.lr_sche_config.type == 'cool_down':
+        total_steps = config.num_ep * len(train_loader)
+        config.lr_sche_config.config['total_steps'] = total_steps
+        if 'warm_up_ratio' in config.lr_sche_config.config:
+            config.lr_sche_config.config['warm_up_steps'] = int(config.lr_sche_config.config.warm_up_ratio * total_steps)
+        else:
+            config.lr_sche_config.config['warm_up_steps'] = 0
+        config.lr_sche_config.config['cool_down_steps'] = int(config.lr_sche_config.config.cool_down_ratio * total_steps)
+    
     
     # MODEL
     print('getting model...')
