@@ -54,8 +54,16 @@ def get_opt_lr_sch(optimizer_config, lr_sche_config, model):
     else:
         raise NotImplementedError
     
-    optimizer = optimizer(model.parameters(),
-                            **optimizer_config.config)
+    no_decay_gps = []
+    decay_gps = []
+    for k, v in model.named_parameters():
+        if v.ndim <= 1:
+            no_decay_gps.append(v)
+        else:
+            decay_gps.append(v)
+    optimizer = optimizer([{'params': no_decay_gps, 'weight_decay': 0.0},
+                             {'params': decay_gps}],
+                             **optimizer_config.config)
     if lr_sche_config.type == 'constant':
         lr_sche = transformers.get_constant_schedule(optimizer)
     elif lr_sche_config.type == 'linear':
